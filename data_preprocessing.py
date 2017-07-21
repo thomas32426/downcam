@@ -2,7 +2,6 @@ from keras.preprocessing import image
 import random
 import numpy as np
 import json
-from math import atan2, pi
 
 def loadLabels(labels_json):
     # '/home/zeon/data/aerial_downcam/unit_vectors.json'
@@ -12,8 +11,8 @@ def loadLabels(labels_json):
         json_data.close()
 
     for key, value in loaded.items():
-        #labels.append([value[0], value[1]])
-        labels.append((atan2(value[1], value[0]) + pi)/(2*pi))
+        labels.append([value[0], value[1]])
+        #labels.append((atan2(value[1], value[0]) + pi)/(2*pi))
     return labels
 
 
@@ -36,7 +35,7 @@ def myGenerator(image_folder, labels, batch_size, total_images):
             batch_images.append(x)
             # batch_labels[i][0] = labels[i][0]
             # batch_labels[i][1] = labels[i][1]
-            batch_labels.append(labels[i])
+            batch_labels.append(labels[index])
 
         batch_images = np.asarray(batch_images)
         batch_labels = np.asarray(batch_labels)
