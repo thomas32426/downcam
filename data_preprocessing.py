@@ -52,4 +52,4 @@ def genTest(image_folder, labels, how_many, num_images):
 
     test_images = np.asarray(test_images)
     test_labels = np.asarray(test_labels)
-    return test_images, test_labels
+    yield test_images, test_labels
