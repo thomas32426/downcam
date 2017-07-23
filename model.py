@@ -8,8 +8,8 @@ from sklearn.metrics import fbeta_score
 # from custom_metric import FScore2
 
 from keras.models import Model
-from keras.layers import Input, Dense
-from keras.layers.core import Dropout
+from keras.layers import Input, Dense, Conv2D, GlobalAveragePooling2D
+from keras.layers.core import Dropout, Lambda
 from keras import metrics, losses
 
 from keras.callbacks import TensorBoard, ModelCheckpoint, EarlyStopping
@@ -20,12 +20,15 @@ from keras.applications.inception_v3 import InceptionV3
 from keras.applications.resnet50 import ResNet50
 from keras.applications.vgg19 import VGG19 
 from keras.applications.vgg16 import VGG16
+from keras import backend as K
+
 
 import sys
 import os
 PATH = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.join(PATH, "resnet", "keras-resnet"))
 # from resnet import ResnetBuilder
+
 
 class class_model(object):
     def __init__(self, input_shape=(256, 256, 3), output_classes=17):
@@ -77,10 +80,22 @@ class class_model(object):
         for layer in base.layers:
             layer.trainable = True
 
-        self.model.compile(loss="mse", optimizer='adam', metrics=["mse"])
-        # losses.binary_crossentropy
-        # metrics.binary_accuracy
+        self.compile()
 
+    def compile(self):
+        self.model.compile(loss="mse", optimizer='adam', metrics=["mae"])
+
+    def add_normalize(self):
+        self.model.layers.pop()
+        self.model.layers.pop()
+        x = self.model.layers[-1].output
+        x = Conv2D(2, (1, 1), padding='valid', name='conv2')(x)
+        x = GlobalAveragePooling2D()(x)
+        x = Lambda(lambda x: K.l2_normalize(x, axis=1), output_shape=(2,))(x)
+        self.model = Model(self.model.input, outputs=[x])
+        self.model.summary()
+        self.compile()
+    
     def train_model(self, input_train, labels, validation=None, save_path=None):
         num_epochs = 15
         batch_size = 8

@@ -8,33 +8,54 @@ from sklearn.model_selection import train_test_split
 import numpy as np
 from PIL import Image
 import os
+from keras.callbacks import TensorBoard, ModelCheckpoint, EarlyStopping
 
 from model import *
 
+PATH = os.getcwd()
 
 if __name__ == '__main__':
 
     # Gather image information
-    image_folder = "../data/aerial_downcam/images/"
-    json_file = '/home/zeon/data/aerial_downcam/unit_vectors.json'
-    train_folder = '/home/zeon/data/aerial_downcam/train_images/'
-    val_folder = '/home/zeon/data/aerial_downcam/validation_images/'
-    test_folder = '/home/zeon/data/aerial_downcam/test_images/'
-    batch_size = 32
-    start_epochs = 10
-    end_epochs = 10
+    json_file =     os.path.join(PATH, "..", "vectors.json")
+    train_folder =  os.path.join(PATH, "..", "training_images")
+    save_path =     os.path.join(PATH, "saved_models", "inceptionNetV3_1")
+
+    batch_size = 64
+    start_epochs = 4
 
     # Load labels and split into lists
-    train_labels, val_labels, test_labels = loadLabels(json_file, train_folder, val_folder, test_folder)
 
     model = class_model(input_shape=(480, 640, 3), output_classes=2)
     model.create_model(model_type="inceptionv3")
+    
+    model.add_normalize()
 
-    model.get_model().fit_generator(myGenerator(train_folder, train_labels, 10),
-                        steps_per_epoch=len(train_labels) // batch_size,
-                        nb_epoch=start_epochs)
-                        #validation_data=val_generator,
-                        #validation_steps=len(val_labels) // batch_size)
+    for l in range(6, 15):
+        count = 0
+        for layer in model.get_model().layers:
+            if count > len(model.get_model().layers) - l:
+                layer.trainable = True
+            else:
+                layer.trainable = False
+            count += 1
+        
+        model.compile()
+
+        train_names, image_labels, train_indexes, val_indexes = splitData(train_folder, json_file)
+
+        checkpoint = ModelCheckpoint(str(save_path)+".h5", monitor='val_loss', save_weights_only=True, mode="min", save_best_only=True)
+
+        train_gen = generatorWithVal(train_folder, train_names, image_labels, train_indexes, batch_size)
+        val_gen = generatorWithVal(train_folder, train_names, image_labels, val_indexes, batch_size)
+        model.get_model().fit_generator(train_gen,
+                            steps_per_epoch=len(train_indexes) // batch_size,
+                            nb_epoch=start_epochs,
+                            validation_data=val_gen,
+                            validation_steps=len(val_indexes) // batch_size,
+                            max_q_size=128, 
+                            verbose=1,
+                            callbacks=[checkpoint])
 
     # # Create the pre-trained base model
     # base_model = InceptionV3(weights='imagenet', include_top=False, input_tensor=Input((480,640,3)), classes=2, pooling='avg')

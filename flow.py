@@ -4,23 +4,17 @@ from keras.preprocessing import image
 import numpy as np
 import random
 
-def loadLabels(labels_json, train_dir, val_dir, test_dir):
+def loadLabels(labels_json, train_dir):
     # '/home/zeon/data/aerial_downcam/unit_vectors.json'
 
     # Get names of files in the image folders
     train_names = [fn for fn in os.listdir(train_dir)]
-    val_names = [fn for fn in os.listdir(val_dir)]
-    test_names = [fn for fn in os.listdir(test_dir)]
 
     # Sort them
     train_names.sort()
-    val_names.sort()
-    test_names.sort()
 
     # Create lists to be filled with labels
     train_labels = []
-    val_labels = []
-    test_labels = []
 
     # Load the labels
     with open(labels_json) as json_data:
@@ -34,62 +28,71 @@ def loadLabels(labels_json, train_dir, val_dir, test_dir):
     for i in sorted_labels:
         if str(i[0]).zfill(7)+'.jpg' in train_names:
             train_labels.append(i[1])
-        elif str(i[0]).zfill(7) + '.jpg' in val_names:
-            val_labels.append(i[1])
-        elif str(i[0]).zfill(7) + '.jpg' in test_names:
-            test_labels.append(i[1])
         #labels.append((atan2(value[1], value[0]) + pi)/(2*pi)) # For angles
 
-    return train_labels, val_labels, test_labels
-
-json_file = '/home/zeon/data/aerial_downcam/unit_vectors.json'
-train_folder = '/home/zeon/data/aerial_downcam/train_images/'
-val_folder = '/home/zeon/data/aerial_downcam/validation_images/'
-test_folder = '/home/zeon/data/aerial_downcam/test_images/'
-
-train_labels, val_labels, test_labels = loadLabels(json_file, train_folder, val_folder, test_folder)
-
-# print(train_labels)
-# print(val_labels)
-# print(test_labels)
-# print(len(train_labels), len(val_labels), len(test_labels))
-
-
-# Load images
-#train_images = np.array([np.array(Image.open(train_folder+fn)) for fn in os.listdir(train_folder)])
-#val_images = np.array([np.array(Image.open(val_folder+fn)) for fn in os.listdir(val_folder)])
-#test_images = np.array([np.array(Image.open(test_folder+fn)) for fn in os.listdir(test_folder)])
-
+    return train_labels
 
 # Make a generator
-def myGenerator(image_folder, image_labels, batch_size):
+
+def splitData(image_folder, labels_json, valRatio = 0.1):
+    image_labels = loadLabels(labels_json, image_folder)
 
     train_names = [fn for fn in os.listdir(image_folder)]
+    train_names.sort()
 
+    total_len = len(train_names)
+    random_index = [i for i in range(total_len)]
+    random.shuffle(random_index)
+
+    cut = int(total_len*(1-valRatio))
+    train_indexes = random_index[:cut]
+    val_indexes = random_index[cut:]
+
+    return train_names, image_labels, train_indexes, val_indexes
+
+def generatorWithVal(image_folder, train_names, image_labels, random_index, batch_size):
     while True:
         batch_images = []
         batch_labels = []
-        for i in range(batch_size):
+        for i, index in enumerate(random_index):
         # Choose random number for images/labels
-            index = random.randrange(len(train_names))
+            # index = random.randrange(len(train_names))
             name = train_names[index]
 
             # Add image and associated label to arrays
-            img = image.load_img(image_folder+name)
+            img = image.load_img(os.path.join(image_folder, name))
             x = image.img_to_array(img)/255
             # x = np.expand_dims(x, axis=0)
             batch_images.append(x)
-            # batch_labels[i][0] = labels[i][0]
-            # batch_labels[i][1] = labels[i][1]
             batch_labels.append(image_labels[index])
 
-            if i == batch_size - 1:
-                final_images = np.asarray(batch_images)
-                final_labels = np.asarray(batch_labels)
-                yield (final_images, final_labels)
+            if i % batch_size == batch_size-1:
+                # final_images = np.asarray(batch_images)
+                # final_labels = np.asarray(batch_labels)
+                # print((final_images, final_labels))
+                yield (np.asarray(batch_images), np.asarray(batch_labels))
                 batch_images = []
                 batch_labels = []
 
-# train_labels, val_labels, test_labels = loadLabels(json_file, train_folder, val_folder, test_folder)
-# (image_array, image_labels) = myGenerator(train_folder, train_labels, 50)
-# print(image_array.shape)
+if __name__ == '__main__':
+    json_file = '/home/zeon/data/aerial_downcam/unit_vectors.json'
+    train_folder = '/home/zeon/data/aerial_downcam/train_images/'
+    val_folder = '/home/zeon/data/aerial_downcam/validation_images/'
+    test_folder = '/home/zeon/data/aerial_downcam/test_images/'
+
+    train_labels, val_labels, test_labels = loadLabels(json_file, train_folder, val_folder, test_folder)
+
+    print(train_labels)
+    print(val_labels)
+    print(test_labels)
+    print(len(train_labels), len(val_labels), len(test_labels))
+
+
+    # Load images
+    #train_images = np.array([np.array(Image.open(train_folder+fn)) for fn in os.listdir(train_folder)])
+    #val_images = np.array([np.array(Image.open(val_folder+fn)) for fn in os.listdir(val_folder)])
+    #test_images = np.array([np.array(Image.open(test_folder+fn)) for fn in os.listdir(test_folder)])
+
+    # train_labels, val_labels, test_labels = loadLabels(json_file, train_folder, val_folder, test_folder)
+    # (image_array, image_labels) = myGenerator(train_folder, train_labels, 50)
+    # print(image_array.shape)
