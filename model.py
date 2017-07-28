@@ -10,15 +10,14 @@ from sklearn.metrics import fbeta_score
 from keras.models import Model
 from keras.layers import Input, Dense, Conv2D, GlobalAveragePooling2D
 from keras.layers.core import Dropout, Lambda
-from keras import metrics, losses
+from keras import metrics, losses, optimizers
 
 from keras.callbacks import TensorBoard, ModelCheckpoint, EarlyStopping
 
 from keras.applications.xception import Xception
 from keras.applications.inception_v3 import InceptionV3
-# from keras.applications.inception_v3_mod import InceptionV3MOD
 from keras.applications.resnet50 import ResNet50
-from keras.applications.vgg19 import VGG19 
+from keras.applications.vgg19 import VGG19
 from keras.applications.vgg16 import VGG16
 from keras import backend as K
 
@@ -26,8 +25,7 @@ from keras import backend as K
 import sys
 import os
 PATH = os.path.dirname(os.path.abspath(__file__))
-sys.path.append(os.path.join(PATH, "resnet", "keras-resnet"))
-# from resnet import ResnetBuilder
+
 
 
 class class_model(object):
@@ -54,19 +52,24 @@ class class_model(object):
             model_name = 'vgg16'
             pred = base.output
         elif(model_type == 'resnet152' or model_type == 5):
+            sys.path.append(os.path.join(PATH, "resnet", "keras-resnet"))
+            from resnet import ResnetBuilder
             resbuild = ResnetBuilder()
             base = resbuild.build_resnet_152(self.input_shape, self.output_size)
             model_name = 'resnet152'
             pred = base.output
         elif(model_type == 'resnet50MOD' or model_type == 6):
+            sys.path.append(os.path.join(PATH, "resnet", "keras-resnet"))
+            from resnet import ResnetBuilder
             resbuild = ResnetBuilder()
             base = resbuild.build_resnet_50(self.input_shape, self.output_size)
             model_name = 'resnet50MOD'
             pred = base.output
-        # elif(model_type == 'inceptionv3MOD' or model_type == 7):
-        #     base = InceptionV3MOD(include_top=False, weights='imagenet', input_tensor=self.input_tensor, classes=self.output_size, pooling='avg')
-        #     model_name = 'inceptionv3MOD'
-        #     pred = base.output
+        elif(model_type == 'inceptionv3MOD' or model_type == 7):
+            from keras.applications.inception_v3_mod import InceptionV3MOD
+            base = InceptionV3MOD(include_top=False, weights='imagenet', input_tensor=self.input_tensor, classes=self.output_size, pooling='avg')
+            model_name = 'inceptionv3MOD'
+            pred = base.output
         else:
             base = Xception(include_top=False, weights='imagenet', input_tensor=self.input_tensor, classes=self.output_size, pooling='avg')
             model_name = 'xception'
@@ -83,7 +86,10 @@ class class_model(object):
         self.compile()
 
     def compile(self):
-        self.model.compile(loss="mse", optimizer='adam', metrics=["mae"])
+        self.model.compile(loss="mse", optimizer=optimizers.RMSprop(lr=0.000001, rho=0.9, epsilon=1e-08, decay=0.0), metrics=["mae"])
+
+    def summary(self):
+        self.model.summary()
 
     def add_normalize(self):
         self.model.layers.pop()
