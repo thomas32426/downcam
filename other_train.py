@@ -42,7 +42,7 @@ if __name__ == '__main__':
         
         model.compile()
 
-        train_names, image_labels, train_indexes, val_indexes = splitData(train_folder, json_file)
+        train_names, image_labels, train_indexes, val_indexes = splitData(train_folder, json_file, old_data=True)
 
         checkpoint = ModelCheckpoint(str(save_path)+".h5", monitor='val_loss', save_weights_only=True, mode="min", save_best_only=True)
 

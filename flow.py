@@ -4,6 +4,34 @@ from keras.preprocessing import image
 import numpy as np
 import random
 
+def loadTest(labels_json, train_dir):
+    train_names = [fn for fn in os.listdir(train_dir)]
+
+    # Sort them
+    train_names.sort()
+    # train_numbers = [s.strip('.jpg') for s in train_names]
+
+    # Create lists to be filled with labels
+    train_labels = []
+
+    # Load the labels
+    with open(labels_json) as json_data:
+        loaded = json.load(json_data)
+        json_data.close()
+
+    # Sort them by key number
+    sorted_labels = sorted(loaded.items(), key=lambda x: str(x[0]))
+
+    for i in sorted_labels:
+        train_labels.append(i[1])
+
+    # Put the labels in the lists
+    # for i in sorted_labels:
+    #     if str(i[0]).zfill(7)+'.jpg' in train_names:
+    #         train_labels.append(float[i][1])
+        
+    return train_names, train_labels
+
 def loadLabels(labels_json, train_dir):
     # '/home/zeon/data/aerial_downcam/unit_vectors.json'
 
@@ -22,13 +50,13 @@ def loadLabels(labels_json, train_dir):
         json_data.close()
 
     # Sort them by key number
+    
     sorted_labels = sorted(loaded.items(), key=lambda x: str(x[0]).zfill(7))
 
     # Put the labels in the lists
     for i in sorted_labels:
         if str(i[0]).zfill(7)+'.jpg' in train_names:
             train_labels.append(i[1])
-        #labels.append((atan2(value[1], value[0]) + pi)/(2*pi)) # For angles
 
     return train_labels
 
@@ -80,12 +108,11 @@ if __name__ == '__main__':
     val_folder = '/home/zeon/data/aerial_downcam/validation_images/'
     test_folder = '/home/zeon/data/aerial_downcam/test_images/'
 
-    train_labels, val_labels, test_labels = loadLabels(json_file, train_folder, val_folder, test_folder)
+    train_names, train_labels = loadTest('/home/marvin/downcam/data/test_vectors.json', '/home/marvin/downcam/data/image_test')
 
+    print(len(train_names), len(train_labels))
     print(train_labels)
-    print(val_labels)
-    print(test_labels)
-    print(len(train_labels), len(val_labels), len(test_labels))
+    print(train_names)
 
 
     # Load images

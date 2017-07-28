@@ -4,7 +4,7 @@
 import json
 import numpy as np
 
-from sklearn.metrics import fbeta_score
+#from sklearn.metrics import fbeta_score
 # from custom_metric import FScore2
 
 from keras.models import Model
@@ -85,6 +85,9 @@ class class_model(object):
     def compile(self):
         self.model.compile(loss="mse", optimizer='adam', metrics=["mae"])
 
+    def load_weights(self, weights_path):
+        self.model.load_weights(weights_path)
+
     def add_normalize(self):
         self.model.layers.pop()
         self.model.layers.pop()
@@ -93,7 +96,6 @@ class class_model(object):
         x = GlobalAveragePooling2D()(x)
         x = Lambda(lambda x: K.l2_normalize(x, axis=1), output_shape=(2,))(x)
         self.model = Model(self.model.input, outputs=[x])
-        self.model.summary()
         self.compile()
     
     def train_model(self, input_train, labels, validation=None, save_path=None):
@@ -117,4 +119,11 @@ class class_model(object):
     def kaggle_metric(self, input_val, labels_val):
         p_val = self.model.predict(input_val, batch_size=128)
         return fbeta_score(labels_val, np.array(p_val) > 0.2, beta=2, average='samples')
+
+    def predict(self, input_val):
+        pred = self.model.predict(input_val)
+        return pred
+
+    def evaluate(self, input_val, labels_val, batch_size=16):
+        self.model.evaluate(input_val, labels_val, batch_size)
 
